@@ -1,0 +1,54 @@
+[build]
+  command = "npm run build"
+  publish = ".output/public"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Netlify Functions (SSR via Nitro)
+[functions]
+  directory = ".output/server"
+  node_bundler = "esbuild"
+
+# Redirect all requests to the Nitro SSR handler
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/server"
+  status = 200
+
+# Cache static assets aggressively (JS/CSS have hashed filenames)
+[[headers]]
+  for = "/_build/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Cache fonts
+[[headers]]
+  for = "/*.woff2"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.woff"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Short cache for the root HTML (always fresh)
+[[headers]]
+  for = "/"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Security headers for all pages
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
