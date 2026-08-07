@@ -1,29 +1,18 @@
 [build]
   command = "npm run build"
-  publish = ".output/public"
+  publish = "dist/client"
 
 [build.environment]
   NODE_VERSION = "20"
 
-# Netlify Functions (SSR via Nitro)
-[functions]
-  directory = ".output/server"
-  node_bundler = "esbuild"
-
-# Redirect all requests to the Nitro SSR handler
-[[redirects]]
-  from = "/*"
-  to = "/.netlify/functions/server"
-  status = 200
-
-# Cache static assets aggressively (JS/CSS have hashed filenames)
+# Cache static assets aggressively (JS/CSS have hashed filenames from Vite)
 [[headers]]
-  for = "/_build/*"
+  for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
 [[headers]]
-  for = "/assets/*"
+  for = "/_build/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
@@ -38,7 +27,7 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# Short cache for the root HTML (always fresh)
+# Root HTML — always revalidate so users get fresh deploys
 [[headers]]
   for = "/"
   [headers.values]

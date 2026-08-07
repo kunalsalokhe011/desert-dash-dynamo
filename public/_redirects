@@ -1,2 +1,2 @@
-# SPA fallback — send all unmatched routes to the SSR handler
-/*    /.netlify/functions/server    200
+# SPA fallback — send unmatched paths to index so TanStack Router handles them client-side
+/*    /index.html    200
