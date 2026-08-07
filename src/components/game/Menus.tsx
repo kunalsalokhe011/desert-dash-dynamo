@@ -60,8 +60,11 @@ export function MainMenu({
   };
 
   return (
-    <div className="absolute inset-0 flex items-start sm:items-center justify-center overflow-y-auto bg-background/70 backdrop-blur-sm"
+    <div
+      className="absolute inset-0 flex items-start sm:items-center justify-center overflow-y-auto bg-background/70 backdrop-blur-sm"
       style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))", paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))", paddingLeft: "0.75rem", paddingRight: "0.75rem" }}
+      // Tapping the backdrop (outside the card) starts the game immediately
+      onPointerDown={(e) => { if (e.target === e.currentTarget) onPlay(); }}
     >
       <div className="animate-pop-in panel w-full max-w-2xl rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-center my-auto">
         <p className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground">Futuristic desert run</p>
@@ -211,7 +214,8 @@ export function MainMenu({
             </div>
             <p className="mt-3 text-[10px] sm:text-xs text-muted-foreground leading-relaxed">
               <span className="hidden sm:inline">Space / ↑ jump · ↓ duck · Shift dash · P pause · </span>
-              Tap to jump · Swipe down to duck · Swipe right to dash
+              <span className="sm:hidden">Tap anywhere to start · Swipe down to duck · Swipe right to dash</span>
+              <span className="hidden sm:inline">Tap to jump · Swipe down to duck · Swipe right to dash</span>
             </p>
           </>
         )}
@@ -238,7 +242,11 @@ export function GameOver({
   const best = state.score >= state.highScore && state.score > 0;
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-background/70 p-3 sm:p-4 backdrop-blur-sm overflow-y-auto">
+    <div
+      className="absolute inset-0 flex items-center justify-center bg-background/70 p-3 sm:p-4 backdrop-blur-sm overflow-y-auto"
+      // Tapping the backdrop restarts immediately
+      onPointerDown={(e) => { if (e.target === e.currentTarget) onRestart(); }}
+    >
       <div className="animate-pop-in panel w-full max-w-md rounded-2xl sm:rounded-3xl p-5 sm:p-7 text-center my-auto">
         <h2 className="font-display text-2xl sm:text-3xl">{best ? "New Best!" : "Run Over"}</h2>
         <div className="text-gradient mt-1 sm:mt-2 font-display text-5xl sm:text-6xl tabular-nums">
