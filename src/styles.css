@@ -122,6 +122,8 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
     overscroll-behavior: none;
+    /* Prevent iOS Safari pull-to-refresh and bounce interfering with the game canvas */
+    touch-action: pan-x pan-y;
   }
 
   h1,
@@ -203,4 +205,17 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Hide scrollbar but keep scroll functionality (used for tab strip on mobile) */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Tailwind custom variants for orientation */
+@custom-variant landscape (@media (orientation: landscape));
+@custom-variant portrait (@media (orientation: portrait));
 

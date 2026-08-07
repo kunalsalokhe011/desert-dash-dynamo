@@ -44,6 +44,64 @@ const initialHud: HudState = {
   unlockedAchievement: null,
 };
 
+/** On-screen control buttons — shown only on touch devices during an active run. */
+function MobileControls({
+  phase,
+  onJump,
+  onDuckStart,
+  onDuckEnd,
+  onDash,
+  onPause,
+}: {
+  phase: HudState["phase"];
+  onJump: () => void;
+  onDuckStart: () => void;
+  onDuckEnd: () => void;
+  onDash: () => void;
+  onPause: () => void;
+}) {
+  if (phase === "menu" || phase === "dead" || phase === "countdown") return null;
+
+  const btn =
+    "pointer-events-auto select-none touch-none rounded-2xl border border-white/20 bg-white/10 backdrop-blur-sm active:scale-90 active:bg-white/25 transition-transform duration-75 flex items-center justify-center text-white/90 text-2xl";
+
+  return (
+    <div
+      className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between px-4"
+      style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+    >
+      {/* Left: Dash + Duck */}
+      <div className="flex gap-3">
+        <button aria-label="Dash" className={`${btn} w-14 h-14`}
+          onPointerDown={(e) => { e.preventDefault(); onDash(); }}>⚡</button>
+        <button aria-label="Duck" className={`${btn} w-14 h-14`}
+          onPointerDown={(e) => { e.preventDefault(); onDuckStart(); }}
+          onPointerUp={(e) => { e.preventDefault(); onDuckEnd(); }}
+          onPointerCancel={(e) => { e.preventDefault(); onDuckEnd(); }}>↓</button>
+      </div>
+
+      {/* Right: Pause + Jump */}
+      <div className="flex gap-3">
+        <button aria-label="Pause" className={`${btn} w-14 h-14 text-lg`}
+          onPointerDown={(e) => { e.preventDefault(); onPause(); }}>⏸</button>
+        <button aria-label="Jump" className={`${btn} w-16 h-16 text-3xl`}
+          onPointerDown={(e) => { e.preventDefault(); onJump(); }}>↑</button>
+      </div>
+    </div>
+  );
+}
+
+/** Shown in portrait mode — tells the user to rotate. */
+function RotatePrompt() {
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background gap-4 landscape:hidden">
+      <div className="text-5xl animate-bounce">📱</div>
+      <p className="font-display text-xl text-foreground">Rotate to play</p>
+      <p className="text-sm text-muted-foreground">This game plays best in landscape</p>
+    </div>
+  );
+}
+
 function EndlessDash() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<Game | null>(null);
@@ -59,7 +117,6 @@ function EndlessDash() {
     gameRef.current?.syncSave(next);
   }, []);
 
-  // Boot the engine once on the client.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -143,12 +200,12 @@ function EndlessDash() {
     };
   }, []);
 
-  // Touch controls: tap = jump, swipe down = duck, swipe forward = dash
-  const touchStart = useRef<{ x: number; y: number; t: number } | null>(null);
+  // Swipe fallback for areas not covered by buttons
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
   const onTouchStart = (e: React.TouchEvent) => {
     const t = e.touches[0];
     if (!t) return;
-    touchStart.current = { x: t.clientX, y: t.clientY, t: Date.now() };
+    touchStart.current = { x: t.clientX, y: t.clientY };
   };
   const onTouchEnd = (e: React.TouchEvent) => {
     const game = gameRef.current;
@@ -177,53 +234,94 @@ function EndlessDash() {
   };
 
   return (
-    <main
-      className={`relative min-h-[100dvh] w-full overflow-hidden bg-background ${save.settings.highContrast ? "contrast-boost" : ""}`}
-    >
-      <h1 className="sr-only">Endless Dash — futuristic desert endless runner</h1>
+    <>
+      {/* Portrait overlay — prompts rotation on phones */}
+      <RotatePrompt />
 
-      <div
-        className="relative mx-auto flex h-[100dvh] w-full max-w-[1400px] items-center justify-center p-2 sm:p-4"
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
+      <main
+        className={`relative w-full bg-background ${save.settings.highContrast ? "contrast-boost" : ""}`}
+        style={{
+          height: "100dvh",
+          touchAction: "none",
+        }}
       >
-        <div className="relative aspect-[960/420] w-full max-h-full overflow-hidden rounded-3xl border border-border shadow-[var(--shadow-panel)]">
-          <canvas ref={canvasRef} className="block h-full w-full touch-none" />
+        <h1 className="sr-only">Endless Dash — futuristic desert endless runner</h1>
 
-          {hud.phase !== "menu" && <Hud state={hud} onPause={() => gameRef.current?.togglePause()} />}
+        {/*
+          Full-screen game wrapper.
+          On desktop: centred with max-width + padding, preserving the 960/420 ratio.
+          On mobile landscape: fills the entire screen edge-to-edge with no padding,
+          safe-area insets handle notches/home bars.
+        */}
+        <div
+          className="relative mx-auto flex h-full w-full items-center justify-center sm:p-4 sm:max-w-[1400px]"
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+        >
+          {/*
+            Canvas container:
+            - Mobile landscape: fills full width & height (edge-to-edge), no border-radius on edges
+            - Desktop: constrained by aspect ratio, rounded corners, max width
+          */}
+          <div
+            className="relative overflow-hidden border border-border shadow-[var(--shadow-panel)]
+                        w-full h-full
+                        sm:h-auto sm:aspect-[960/420] sm:rounded-3xl"
+          >
 
-          {hud.phase === "countdown" && (
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div key={hud.countdown} className="animate-pop-in text-gradient font-display text-8xl">
-                {hud.countdown || "GO"}
+            <canvas ref={canvasRef} className="block h-full w-full touch-none" />
+
+            {hud.phase !== "menu" && (
+              <Hud state={hud} onPause={() => gameRef.current?.togglePause()} />
+            )}
+
+            {hud.phase === "countdown" && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <div key={hud.countdown} className="animate-pop-in text-gradient font-display text-6xl sm:text-8xl">
+                  {hud.countdown || "GO"}
+                </div>
               </div>
+            )}
+
+            <div className="pointer-events-none absolute left-1/2 top-2 -translate-x-1/2 rounded-full bg-background/50 px-2.5 py-0.5 text-[9px] uppercase tracking-[0.3em] text-muted-foreground backdrop-blur">
+              {hud.environment}
             </div>
-          )}
 
-          <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-background/50 px-3 py-1 text-[10px] uppercase tracking-[0.3em] text-muted-foreground backdrop-blur">
-            {hud.environment}
-          </div>
+            {hud.phase === "menu" && (
+              <MainMenu state={hud} save={save} onPlay={startRun} onSave={applySave} />
+            )}
+            {hud.phase === "paused" && (
+              <PauseMenu
+                onResume={() => gameRef.current?.togglePause()}
+                onMenu={() => gameRef.current?.toMenu()}
+              />
+            )}
+            {hud.phase === "dead" && (
+              <GameOver state={hud} onRestart={startRun} onMenu={() => gameRef.current?.toMenu()} />
+            )}
 
-          {hud.phase === "menu" && (
-            <MainMenu state={hud} save={save} onPlay={startRun} onSave={applySave} />
-          )}
-          {hud.phase === "paused" && (
-            <PauseMenu
-              onResume={() => gameRef.current?.togglePause()}
-              onMenu={() => gameRef.current?.toMenu()}
+            <MobileControls
+              phase={hud.phase}
+              onJump={() => {
+                const g = gameRef.current;
+                if (!g) return;
+                if (g.phase === "menu" || g.phase === "dead") g.beginRun();
+                else g.jump();
+              }}
+              onDuckStart={() => gameRef.current?.setDuck(true)}
+              onDuckEnd={() => gameRef.current?.setDuck(false)}
+              onDash={() => gameRef.current?.dash()}
+              onPause={() => gameRef.current?.togglePause()}
             />
-          )}
-          {hud.phase === "dead" && (
-            <GameOver state={hud} onRestart={startRun} onMenu={() => gameRef.current?.toMenu()} />
-          )}
 
-          {toast && (
-            <div className="animate-pop-in absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground shadow-[var(--shadow-glow)]">
-              {toast}
-            </div>
-          )}
+            {toast && (
+              <div className="animate-pop-in absolute bottom-20 sm:bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground shadow-[var(--shadow-glow)] whitespace-nowrap">
+                {toast}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </>
   );
 }
