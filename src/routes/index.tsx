@@ -214,6 +214,11 @@ function EndlessDash() {
     if (!game || !start || !t) return;
     const dx = t.clientX - start.x;
     const dy = t.clientY - start.y;
+
+    // Only handle swipe/tap gestures during an active run — never on menu or dead screens
+    // (those screens have their own buttons)
+    if (game.phase === "menu" || game.phase === "dead") return;
+
     game.setDuck(false);
     if (dy > 50 && Math.abs(dy) > Math.abs(dx)) {
       game.setDuck(true);
@@ -224,8 +229,7 @@ function EndlessDash() {
       game.dash();
       return;
     }
-    if (game.phase === "menu" || game.phase === "dead") game.beginRun();
-    else game.jump();
+    game.jump();
   };
 
   const startRun = () => {
@@ -302,12 +306,7 @@ function EndlessDash() {
 
             <MobileControls
               phase={hud.phase}
-              onJump={() => {
-                const g = gameRef.current;
-                if (!g) return;
-                if (g.phase === "menu" || g.phase === "dead") g.beginRun();
-                else g.jump();
-              }}
+              onJump={() => gameRef.current?.jump()}
               onDuckStart={() => gameRef.current?.setDuck(true)}
               onDuckEnd={() => gameRef.current?.setDuck(false)}
               onDash={() => gameRef.current?.dash()}
